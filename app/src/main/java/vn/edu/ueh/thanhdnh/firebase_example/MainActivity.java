@@ -2,54 +2,67 @@ package vn.edu.ueh.thanhdnh.firebase_example;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-
-import androidx.activity.EdgeToEdge;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
-  FirebaseFirestore db;
-  Button btAdd, btShow;
-  EditText etName, etPhone;
+public class MainActivity extends AppCompatActivity {
+  private EditText etTitle, etContent, etImageUrl;
+  private Button btnSave, btnViewList;
+  private FirebaseFirestore db;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    EdgeToEdge.enable(this);
     setContentView(R.layout.activity_main);
-    ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-      Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-      v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-      return insets;
-    });
 
+    etTitle = findViewById(R.id.etTitle);
+    etContent = findViewById(R.id.etContent);
+    etImageUrl = findViewById(R.id.etImageUrl);
+    btnSave = findViewById(R.id.btnSave);
+    btnViewList = findViewById(R.id.btnViewList);
+
+    // Khởi tạo Firestore theo mục 7 trong file hướng dẫn
     FirebaseApp.initializeApp(this);
     db = FirebaseFirestore.getInstance();
-    btAdd = findViewById(R.id.btAdd);
-    btShow = findViewById(R.id.btShow);
-    etName = findViewById(R.id.etName);
-    etPhone = findViewById(R.id.etPhone);
-    btAdd.setOnClickListener(this);
-    btShow.setOnClickListener(this);
-  }
 
-  @Override
-  public void onClick(View view) {
-    if (view.getId() == R.id.btAdd) {
-      db.collection("users").add(new User(etName.getText().toString(), etPhone.getText().toString()));
-      etName.setText("");
-      etPhone.setText("");
-    } else if (view.getId() == R.id.btShow) {
-      Intent intent = new Intent(getBaseContext(), ShowDataActivity.class);
+    // Gán sẵn link ảnh mẫu tiện test trên máy ảo
+    etImageUrl.setText("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRj1BHCbnijU-dUK-t6anlCtlOct0SVob-EepPCwwUweA&s");
+
+    // 1. Thêm dữ liệu theo Slide 90: db.collection(...).add(...).addOnSuccessListener(...).addOnFailureListener(...)
+    btnSave.setOnClickListener(v -> {
+      String title = etTitle.getText().toString().trim();
+      String content = etContent.getText().toString().trim();
+      String imageUrl = etImageUrl.getText().toString().trim();
+
+      if (title.isEmpty() || content.isEmpty()) {
+        Toast.makeText(this, "Vui lòng nhập đầy đủ Title và Content", Toast.LENGTH_SHORT).show();
+        return;
+      }
+
+      Article article = new Article("", title, content, imageUrl);
+
+      db.collection("articles").add(article)
+              .addOnSuccessListener(documentReference -> {
+                // Cập nhật lại id của document vừa tạo vào Article
+                documentReference.update("id", documentReference.getId());
+                Toast.makeText(MainActivity.this, "Thêm Article thành công!", Toast.LENGTH_SHORT).show();
+                etTitle.setText("");
+                etContent.setText("");
+              })
+              .addOnFailureListener(e -> {
+                Toast.makeText(MainActivity.this, "Lỗi thêm dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+              });
+    });
+
+    // 2. Chuyển sang màn hình xem danh sách
+    btnViewList.setOnClickListener(v -> {
+      Intent intent = new Intent(MainActivity.this, ShowDataActivity.class);
       startActivity(intent);
-    }
+    });
   }
 }
